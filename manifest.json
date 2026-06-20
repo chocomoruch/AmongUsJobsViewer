@@ -1,0 +1,22 @@
+{
+  "name": "Among Us 役職・用語図鑑",
+  "short_name": "役職図鑑",
+  "description": "Among Usの役職や特殊用語をまとめた図鑑アプリです。",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color: "#2b2d31",
+  "theme_color": "#1e1f22",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

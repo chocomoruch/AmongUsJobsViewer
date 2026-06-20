@@ -3,7 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Among Us 役職解説図鑑</title>
+    <title>Among Us 役職・用語図鑑</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e1f22">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker registered', reg))
+                    .catch(err => console.error('Service Worker registration failed', err));
+            });
+        }
+    </script>
     <style>
         :root {
             --bg-color: #1e1f22;
@@ -45,7 +61,7 @@
 
         header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             border-bottom: 2px solid var(--border-color);
             padding-bottom: 20px;
         }
@@ -59,6 +75,46 @@
         header p {
             color: var(--text-muted);
             font-size: 14px;
+        }
+
+        /* 👑 ナビゲーションタブ */
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 16px;
+            font-weight: bold;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: color 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn:hover {
+            color: #fff;
+        }
+
+        .tab-btn.active {
+            color: var(--accent-blue);
+            border-bottom-color: var(--accent-blue);
+        }
+
+        /* コンテンツエリアの表示切り替え */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         /* 検索・フィルターエリア */
@@ -136,7 +192,6 @@
             box-shadow: 0 5px 10px rgba(0,0,0,0.2);
         }
 
-        /* 陣営ごとのカードアクセント */
         .job-card.crewmate { border-left-color: var(--crewmate-color); }
         .job-card.impostor { border-left-color: var(--impostor-color); }
         .job-card.neutral { border-left-color: var(--neutral-color); }
@@ -168,9 +223,44 @@
 
         .job-desc {
             font-size: 14px;
-            white-space: pre-wrap; /* \n による改行を有効化 */
+            white-space: pre-wrap;
             color: #dbdee1;
             word-break: break-all;
+        }
+
+        /* カスタム絵文字のスタイル */
+        .discord-emoji {
+            display: inline-block;
+            vertical-align: text-bottom;
+            height: 1.3em;
+            margin: 0 2px;
+        }
+
+        /* 👑 用語集のスタイル */
+        .term-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .term-card {
+            background-color: var(--bg-color);
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .term-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--accent-blue);
+            margin-bottom: 8px;
+        }
+
+        .term-desc {
+            font-size: 14px;
+            color: #dbdee1;
+            white-space: pre-wrap;
         }
 
         .no-results {
@@ -180,7 +270,6 @@
             color: var(--text-muted);
         }
 
-        /* エラー表示 */
         .error-message {
             background-color: rgba(231, 76, 60, 0.2);
             border: 1px solid var(--impostor-color);
@@ -196,41 +285,83 @@
 
 <div class="container">
     <header>
-        <h1>Among Us 役職解説図鑑</h1>
-        <p>TOHKjobs.json のデータをリアルタイムに表示しています</p>
+        <h1>Among Us 役職・用語図鑑</h1>
+        <p>TOHKjobs.json のデータと基本用語をまとめています</p>
     </header>
+
+    <div class="nav-tabs">
+        <button class="tab-btn active" onclick="switchTab('jobs')">役職図鑑</button>
+        <button class="tab-btn" onclick="switchTab('terms')">用語図鑑</button>
+    </div>
 
     <div id="error-container" class="error-message"></div>
 
-    <div class="controls">
-        <div class="search-box">
-            <input type="text" id="search-input" placeholder="役職名やキーワードで検索...">
+    <div id="tab-jobs" class="tab-content active">
+        <div class="controls">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="役職名やキーワードで検索...">
+            </div>
+            <div class="filter-buttons">
+                <button class="btn active" data-camp="all">すべて</button>
+                <button class="btn" data-camp="crewmate">クルー陣営</button>
+                <button class="btn" data-camp="impostor">インポスター陣営</button>
+                <button class="btn" data-camp="neutral">第三陣営</button>
+            </div>
         </div>
-        <div class="filter-buttons">
-            <button class="btn active" data-camp="all">すべて</button>
-            <button class="btn" data-camp="crewmate">クルー陣営</button>
-            <button class="btn" data-camp="impostor">インポスター陣営</button>
-            <button class="btn" data-camp="neutral">第三陣営</button>
-        </div>
+        <div class="job-grid" id="job-grid"></div>
     </div>
 
-    <div class="job-grid" id="job-grid">
-        </div>
+    <div id="tab-terms" class="tab-content">
+        <div class="term-list" id="term-list">
+            </div>
+    </div>
 </div>
 
 <script>
-    // 陣営の日本語マッピング
+    // 🌟 絵文字の名前とIDの対応表
+    const EMOJI_MAP = {
+        "Acid": "1517694175288492134",
+        "Stage3DeadBody": "1517694782560800818",
+        "Shapeshifter": "1466792596037701736",
+        "EmergencyButton": "1517693679324762294",
+        "Kill": "1466447883816407082",
+        "phantom": "1517692922722652261"
+    };
+
+    // 👑 特殊用語の解説データ（ここを編集して増やせます！）
+    const TERMS_DATA = [
+        {
+            name: "キルフラッシュ",
+            desc: "誰かがキルされた瞬間に、画面が一瞬パッと光る現象のこと。シーアなどの一部役職が持つ能力で、これによってリアルタイムに「今、誰かが死んだ」ことを察知できます。"
+        },
+        {
+            name: "サイドキック / ジャッカルドール",
+            desc: "人外陣営（インポスターやジャッカルなど）のスキルによって、ゲーム途中で別陣営から自分の味方に引き入れられた（寝返らせた）プレイヤーのこと。元々の役職から能力が変わったり、主人がデスした際に昇格したりします。"
+        },
+        {
+            name: "確白（かくしろ）",
+            desc: "「確実に白（クルー）」であることが全員または特定のプレイヤーから証明されている状態。スキャンタスクなどの視覚タスクをみんなの前でこなしたり、役職の性質（エクスプレスなど）から人外ではないと確定している人を指します。"
+        },
+        {
+            name: "サボタージュ",
+            desc: "インポスター陣営が引き起こす嫌がらせ・妨害工作（停電、リアクター、酸素枯渇など）のこと。クルーはこれを制限時間内に修理しないと敗北してしまうものもあります。"
+        },
+        {
+            name: "単独勝利",
+            desc: "第三陣営（neutral）の一部が持つ勝利条件。クルーやインポスターが全滅する前に、自分に課せられた特殊な目標（追放される、油を全員に塗る、死体を3回食べるなど）を達成することで、他陣営を差し置いて1人でゲームに勝利します。"
+        }
+    ];
+
     const campNames = {
         crewmate: "クルー陣営",
         impostor: "インポスター陣営",
         neutral: "第三陣営"
     };
 
-    let allJobs = []; // 全役職をフラットに保持する配列
+    let allJobs = [];
     let currentFilter = 'all';
     let currentSearch = '';
 
-    // HTML上の要素
     const jobGrid = document.getElementById('job-grid');
     const searchInput = document.getElementById('search-input');
     const filterButtons = document.querySelectorAll('.filter-buttons .btn');
@@ -245,13 +376,8 @@
             return response.json();
         })
         .then(data => {
-            // JSONの構造を扱いやすいようにフラットな配列に変換
-            // 例: { name: "バイパー", camp: "impostor", desc: "インポスター陣営 - バイパー\n..." }
             for (const [camp, jobs] of Object.entries(data)) {
                 for (const [jobName, jobDesc] of Object.entries(jobs)) {
-                    // Discord固有のカスタム絵文字構文 <:Acid:15176... > などを
-                    // Webでも見やすいように「:Acid:」のようなテキストプレースホルダー、または消去する加工をここで行うことも可能です。
-                    // 今回はそのまま表示（白文字テキスト化）します。
                     allJobs.push({
                         name: jobName,
                         camp: camp,
@@ -259,8 +385,8 @@
                     });
                 }
             }
-            // 初期表示
             renderJobs();
+            renderTerms(); // 用語集もついでに生成
         })
         .catch(error => {
             errorContainer.textContent = error.message;
@@ -268,11 +394,26 @@
             console.error(error);
         });
 
-    // 役職カードの描画処理
+    // 🌟 名前だけのプレースホルダーを画像タグに置換する関数（対応表ver）
+    function parseDiscordEmojis(text) {
+        let escaped = escapeHtml(text);
+        const placeholderRegex = /:([a-zA-Z0-9_]+):/g;
+
+        escaped = escaped.replace(placeholderRegex, (match, name) => {
+            const id = EMOJI_MAP[name];
+            if (id) {
+                return `<img class="discord-emoji" src="https://cdn.discordapp.com/emojis/${id}.png" alt=":${name}:" title="${name}">`;
+            }
+            return `:${name}:`;
+        });
+
+        return escaped;
+    }
+
+    // 役職カードの描画
     function renderJobs() {
         jobGrid.innerHTML = '';
 
-        // フィルターと検索条件に合うものを抽出
         const filteredJobs = allJobs.filter(job => {
             const matchesCamp = currentFilter === 'all' || job.camp === currentFilter;
             const matchesSearch = job.name.toLowerCase().includes(currentSearch.toLowerCase()) || 
@@ -285,41 +426,67 @@
             return;
         }
 
-        // カードを生成して挿入
         filteredJobs.forEach(job => {
             const card = document.createElement('div');
             card.className = `job-card ${job.camp}`;
+
+            const htmlDesc = parseDiscordEmojis(job.desc);
 
             card.innerHTML = `
                 <div class="job-header">
                     <span class="job-name">${escapeHtml(job.name)}</span>
                     <span class="camp-badge ${job.camp}">${campNames[job.camp] || job.camp}</span>
                 </div>
-                <div class="job-desc">${escapeHtml(job.desc)}</div>
+                <div class="job-desc">${htmlDesc}</div>
             `;
             jobGrid.appendChild(card);
         });
     }
 
-    // 検索入力時のイベント
+    // 👑 用語集カードの描画
+    function renderTerms() {
+        const termList = document.getElementById('term-list');
+        termList.innerHTML = '';
+
+        TERMS_DATA.forEach(term => {
+            const card = document.createElement('div');
+            card.className = 'term-card';
+            card.innerHTML = `
+                <div class="term-name">🔹 ${escapeHtml(term.name)}</div>
+                <div class="term-desc">${parseDiscordEmojis(term.desc)}</div>
+            `;
+            termList.appendChild(card);
+        });
+    }
+
+    // 👑 タブ切り替えロジック
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        if(tabName === 'jobs') {
+            document.querySelector('.tab-btn[onclick="switchTab(\'jobs\')"]').classList.add('active');
+            document.getElementById('tab-jobs').classList.add('active');
+        } else {
+            document.querySelector('.tab-btn[onclick="switchTab(\'terms\')"]').classList.add('active');
+            document.getElementById('tab-terms').classList.add('active');
+        }
+    }
+
     searchInput.addEventListener('input', (e) => {
         currentSearch = e.target.value;
         renderJobs();
     });
 
-    // フィルターボタンクリック時のイベント
     filterButtons.forEach(button => {
         button.addEventListener('click', () => {
-            // アクティブクラスの切り替え
             filterButtons.forEach(btn => btn.classList.remove('active'));
             button.classList.add('active');
-
             currentFilter = button.getAttribute('data-camp');
             renderJobs();
         });
     });
 
-    // 安全にテキストを表示するためのエスケープ関数
     function escapeHtml(str) {
         return str
             .replace(/&/g, "&amp;")
