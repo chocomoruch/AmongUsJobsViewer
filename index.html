@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Among Us 役職解説図鑑</title>
+    <style>
+        :root {
+            --bg-color: #1e1f22;
+            --container-bg: #2b2d31;
+            --text-color: #dbdee1;
+            --text-muted: #949ba4;
+            --accent-blue: #5865f2;
+            --accent-blue-hover: #4752c4;
+            --border-color: #3f4147;
+            
+            /* 陣営カラー */
+            --crewmate-color: #2ecc71;
+            --impostor-color: #e74c3c;
+            --neutral-color: #e67e22;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 24px;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        /* 検索・フィルターエリア */
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 16px;
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: var(--accent-blue);
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+        }
+
+        .btn.active[data-camp="all"] { background-color: #72767d; color: #fff; }
+        .btn.active[data-camp="crewmate"] { background-color: var(--crewmate-color); color: #fff; border-color: var(--crewmate-color); }
+        .btn.active[data-camp="impostor"] { background-color: var(--impostor-color); color: #fff; border-color: var(--impostor-color); }
+        .btn.active[data-camp="neutral"] { background-color: var(--neutral-color); color: #fff; border-color: var(--neutral-color); }
+
+        /* 役職リストエリア */
+        .job-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .job-card {
+            background-color: var(--bg-color);
+            border-radius: 6px;
+            padding: 20px;
+            border-left: 5px solid #72767d;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .job-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+        }
+
+        /* 陣営ごとのカードアクセント */
+        .job-card.crewmate { border-left-color: var(--crewmate-color); }
+        .job-card.impostor { border-left-color: var(--impostor-color); }
+        .job-card.neutral { border-left-color: var(--neutral-color); }
+
+        .job-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .job-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .camp-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .camp-badge.crewmate { background-color: var(--crewmate-color); }
+        .camp-badge.impostor { background-color: var(--impostor-color); }
+        .camp-badge.neutral { background-color: var(--neutral-color); }
+
+        .job-desc {
+            font-size: 14px;
+            white-space: pre-wrap; /* \n による改行を有効化 */
+            color: #dbdee1;
+            word-break: break-all;
+        }
+
+        .no-results {
+            text-align: center;
+            grid-column: 1 / -1;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        /* エラー表示 */
+        .error-message {
+            background-color: rgba(231, 76, 60, 0.2);
+            border: 1px solid var(--impostor-color);
+            color: #ff8578;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Among Us 役職解説図鑑</h1>
+        <p>TOHKjobs.json のデータをリアルタイムに表示しています</p>
+    </header>
+
+    <div id="error-container" class="error-message"></div>
+
+    <div class="controls">
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="役職名やキーワードで検索...">
+        </div>
+        <div class="filter-buttons">
+            <button class="btn active" data-camp="all">すべて</button>
+            <button class="btn" data-camp="crewmate">クルー陣営</button>
+            <button class="btn" data-camp="impostor">インポスター陣営</button>
+            <button class="btn" data-camp="neutral">第三陣営</button>
+        </div>
+    </div>
+
+    <div class="job-grid" id="job-grid">
+        </div>
+</div>
+
+<script>
+    // 陣営の日本語マッピング
+    const campNames = {
+        crewmate: "クルー陣営",
+        impostor: "インポスター陣営",
+        neutral: "第三陣営"
+    };
+
+    let allJobs = []; // 全役職をフラットに保持する配列
+    let currentFilter = 'all';
+    let currentSearch = '';
+
+    // HTML上の要素
+    const jobGrid = document.getElementById('job-grid');
+    const searchInput = document.getElementById('search-input');
+    const filterButtons = document.querySelectorAll('.filter-buttons .btn');
+    const errorContainer = document.getElementById('error-container');
+
+    // JSONデータの読み込み
+    fetch('TOHKjobs.json')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('TOHKjobs.json が見つからないか、読み込めませんでした。同じフォルダにファイルがあるか確認してください。');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // JSONの構造を扱いやすいようにフラットな配列に変換
+            // 例: { name: "バイパー", camp: "impostor", desc: "インポスター陣営 - バイパー\n..." }
+            for (const [camp, jobs] of Object.entries(data)) {
+                for (const [jobName, jobDesc] of Object.entries(jobs)) {
+                    // Discord固有のカスタム絵文字構文 <:Acid:15176... > などを
+                    // Webでも見やすいように「:Acid:」のようなテキストプレースホルダー、または消去する加工をここで行うことも可能です。
+                    // 今回はそのまま表示（白文字テキスト化）します。
+                    allJobs.push({
+                        name: jobName,
+                        camp: camp,
+                        desc: jobDesc
+                    });
+                }
+            }
+            // 初期表示
+            renderJobs();
+        })
+        .catch(error => {
+            errorContainer.textContent = error.message;
+            errorContainer.style.display = 'block';
+            console.error(error);
+        });
+
+    // 役職カードの描画処理
+    function renderJobs() {
+        jobGrid.innerHTML = '';
+
+        // フィルターと検索条件に合うものを抽出
+        const filteredJobs = allJobs.filter(job => {
+            const matchesCamp = currentFilter === 'all' || job.camp === currentFilter;
+            const matchesSearch = job.name.toLowerCase().includes(currentSearch.toLowerCase()) || 
+                                  job.desc.toLowerCase().includes(currentSearch.toLowerCase());
+            return matchesCamp && matchesSearch;
+        });
+
+        if (filteredJobs.length === 0) {
+            jobGrid.innerHTML = '<div class="no-results">該当する役職が見つかりませんでした。</div>';
+            return;
+        }
+
+        // カードを生成して挿入
+        filteredJobs.forEach(job => {
+            const card = document.createElement('div');
+            card.className = `job-card ${job.camp}`;
+
+            card.innerHTML = `
+                <div class="job-header">
+                    <span class="job-name">${escapeHtml(job.name)}</span>
+                    <span class="camp-badge ${job.camp}">${campNames[job.camp] || job.camp}</span>
+                </div>
+                <div class="job-desc">${escapeHtml(job.desc)}</div>
+            `;
+            jobGrid.appendChild(card);
+        });
+    }
+
+    // 検索入力時のイベント
+    searchInput.addEventListener('input', (e) => {
+        currentSearch = e.target.value;
+        renderJobs();
+    });
+
+    // フィルターボタンクリック時のイベント
+    filterButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // アクティブクラスの切り替え
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            currentFilter = button.getAttribute('data-camp');
+            renderJobs();
+        });
+    });
+
+    // 安全にテキストを表示するためのエスケープ関数
+    function escapeHtml(str) {
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+</script>
+</body>
+</html>
