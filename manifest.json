@@ -4,7 +4,7 @@
   "description": "Among Usの役職や特殊用語をまとめた図鑑アプリです。",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color: "#2b2d31",
+  "background_color": "#2b2d31",
   "theme_color": "#1e1f22",
   "orientation": "portrait-primary",
   "icons": [
