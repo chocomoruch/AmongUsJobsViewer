@@ -20,6 +20,7 @@
             });
         }
     </script>
+    
     <style>
         :root {
             --bg-color: #1e1f22;
@@ -77,7 +78,6 @@
             font-size: 14px;
         }
 
-        /* 👑 ナビゲーションタブ */
         .nav-tabs {
             display: flex;
             justify-content: center;
@@ -108,7 +108,6 @@
             border-bottom-color: var(--accent-blue);
         }
 
-        /* コンテンツエリアの表示切り替え */
         .tab-content {
             display: none;
         }
@@ -184,12 +183,14 @@
             border-radius: 6px;
             padding: 20px;
             border-left: 5px solid #72767d;
+            cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .job-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+            filter: brightness(1.1);
         }
 
         .job-card.crewmate { border-left-color: var(--crewmate-color); }
@@ -223,12 +224,12 @@
 
         .job-desc {
             font-size: 14px;
-            white-space: pre-wrap;
-            color: #dbdee1;
-            word-break: break-all;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        /* カスタム絵文字のスタイル */
         .discord-emoji {
             display: inline-block;
             vertical-align: text-bottom;
@@ -236,7 +237,14 @@
             margin: 0 2px;
         }
 
-        /* 👑 用語集のスタイル */
+        /* 👑 Discord風マークダウン（-# ）用のスタイル */
+        .discord-small {
+            font-size: 0.85em;
+            color: var(--text-muted);
+            display: inline-block;
+        }
+
+        /* 用語集のスタイル */
         .term-list {
             display: flex;
             flex-direction: column;
@@ -261,6 +269,81 @@
             font-size: 14px;
             color: #dbdee1;
             white-space: pre-wrap;
+        }
+
+        /* ポップアップ（モーダル）のスタイル */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: var(--container-bg);
+            width: 90%;
+            max-width: 500px;
+            border-radius: 8px;
+            padding: 25px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+            position: relative;
+            transform: scale(0.9);
+            transition: transform 0.2s ease;
+            border-top: 6px solid #72767d;
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-content.crewmate { border-top-color: var(--crewmate-color); }
+        .modal-content.impostor { border-top-color: var(--impostor-color); }
+        .modal-content.neutral { border-top-color: var(--neutral-color); }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .modal-close-btn:hover {
+            color: #fff;
+        }
+
+        .modal-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-body {
+            font-size: 15px;
+            color: #dbdee1;
+            white-space: pre-wrap;
+            line-height: 1.6;
         }
 
         .no-results {
@@ -291,7 +374,7 @@
 
     <div class="nav-tabs">
         <button class="tab-btn active" onclick="switchTab('jobs')">役職図鑑</button>
-        <button class="tab-btn" onclick="switchTab('terms')">用語図鑑</button>
+        <button class="tab-btn" onclick="switchTab('terms')">用語解説</button>
     </div>
 
     <div id="error-container" class="error-message"></div>
@@ -312,13 +395,20 @@
     </div>
 
     <div id="tab-terms" class="tab-content">
-        <div class="term-list" id="term-list">
-            </div>
+        <div class="term-list" id="term-list"></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="job-modal" onclick="closeModal(event)">
+    <div class="modal-content" id="modal-content" onclick="event.stopPropagation()">
+        <button class="modal-close-btn" onclick="closeModal(force=true)">&times;</button>
+        <div class="modal-title" id="modal-title">役職名</div>
+        <div class="modal-body" id="modal-body">役職の詳細説明</div>
     </div>
 </div>
 
 <script>
-    // 🌟 絵文字の名前とIDの対応表
+    // 絵文字の名前とIDの対応表
     const EMOJI_MAP = {
         "Acid": "1517694175288492134",
         "Stage3DeadBody": "1517694782560800818",
@@ -328,7 +418,7 @@
         "phantom": "1517692922722652261"
     };
 
-    // 👑 特殊用語の解説データ（ここを編集して増やせます！）
+    // 特殊用語の解説データ
     const TERMS_DATA = [
         {
             name: "キルフラッシュ",
@@ -371,7 +461,7 @@
     fetch('TOHKjobs.json')
         .then(response => {
             if (!response.ok) {
-                throw new Error('TOHKjobs.json が見つからないか、読み込めませんでした。同じフォルダにファイルがあるか確認してください。');
+                throw new Error('TOHKjobs.json が見つからないか、読み込めませんでした。');
             }
             return response.json();
         })
@@ -386,7 +476,8 @@
                 }
             }
             renderJobs();
-            renderTerms(); // 用語集もついでに生成
+            renderTerms();
+            checkUrlParameter();
         })
         .catch(error => {
             errorContainer.textContent = error.message;
@@ -394,12 +485,25 @@
             console.error(error);
         });
 
-    // 🌟 名前だけのプレースホルダーを画像タグに置換する関数（対応表ver）
-    function parseDiscordEmojis(text) {
-        let escaped = escapeHtml(text);
-        const placeholderRegex = /:([a-zA-Z0-9_]+):/g;
+    // 👑 Discord特有の記述を解析・マークダウン置換するメイン関数
+    function parseDiscordMarkdown(text) {
+        let pool = escapeHtml(text);
 
-        escaped = escaped.replace(placeholderRegex, (match, name) => {
+        // 1. [表示名](リンク) のパターンを検知し、(リンク)の部分を完全に消去して「表示名」だけにする
+        // 例: [インポスター陣営 - バイパー](URL?job=バイパー) -> インポスター陣営 - バイパー
+        const linkRegex = /\[(.*?)\]\((.*?)\)/g;
+        pool = pool.replace(linkRegex, '$1');
+
+        // 2. Discordの「-# 文字」による小文字化に対応
+        // 行頭または改行の直後に -# があれば、その行を丸ごと小さい文字用のスパンで囲む
+        const smallRegex = /(?:^|\n)-#\s+([^\n]*)/g;
+        pool = pool.replace(smallRegex, (match, content) => {
+            return `\n<span class="discord-small">${content}</span>`;
+        });
+
+        // 3. 既存のカスタム絵文字を画像タグへ置換
+        const placeholderRegex = /:([a-zA-Z0-9_]+):/g;
+        pool = pool.replace(placeholderRegex, (match, name) => {
             const id = EMOJI_MAP[name];
             if (id) {
                 return `<img class="discord-emoji" src="https://cdn.discordapp.com/emojis/${id}.png" alt=":${name}:" title="${name}">`;
@@ -407,10 +511,10 @@
             return `:${name}:`;
         });
 
-        return escaped;
+        return pool;
     }
 
-    // 役職カードの描画
+    // 役職リストの描画
     function renderJobs() {
         jobGrid.innerHTML = '';
 
@@ -429,37 +533,81 @@
         filteredJobs.forEach(job => {
             const card = document.createElement('div');
             card.className = `job-card ${job.camp}`;
+            card.setAttribute('onclick', `openModal('${job.name}')`);
 
-            const htmlDesc = parseDiscordEmojis(job.desc);
+            // リスト側の一覧を生成する時も、[リンク](...)を消した綺麗な状態から1行目を取得する
+            const cleanFullDesc = parseDiscordMarkdown(job.desc);
+            // HTMLタグ(imgなど)を考慮せずプレーンテキスト化するために一時的な要素でパース
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = cleanFullDesc;
+            const plainText = tempDiv.textContent || tempDiv.innerText || "";
+            const simpleDesc = plainText.split('\n')[0];
 
             card.innerHTML = `
                 <div class="job-header">
                     <span class="job-name">${escapeHtml(job.name)}</span>
                     <span class="camp-badge ${job.camp}">${campNames[job.camp] || job.camp}</span>
                 </div>
-                <div class="job-desc">${htmlDesc}</div>
+                <div class="job-desc">${escapeHtml(simpleDesc)}...</div>
             `;
             jobGrid.appendChild(card);
         });
     }
 
-    // 👑 用語集カードの描画
+    // 用語集の描画
     function renderTerms() {
         const termList = document.getElementById('term-list');
         termList.innerHTML = '';
-
         TERMS_DATA.forEach(term => {
             const card = document.createElement('div');
             card.className = 'term-card';
             card.innerHTML = `
                 <div class="term-name">🔹 ${escapeHtml(term.name)}</div>
-                <div class="term-desc">${parseDiscordEmojis(term.desc)}</div>
+                <div class="term-desc">${parseDiscordMarkdown(term.desc)}</div>
             `;
             termList.appendChild(card);
         });
     }
 
-    // 👑 タブ切り替えロジック
+    // ポップアップ（モーダル）の制御ロジック
+    function openModal(jobName) {
+        const job = allJobs.find(j => j.name === jobName);
+        if (!job) return;
+
+        const modal = document.getElementById('job-modal');
+        const contentBox = document.getElementById('modal-content');
+        const title = document.getElementById('modal-title');
+        const body = document.getElementById('modal-body');
+
+        contentBox.className = `modal-content ${job.camp}`;
+        
+        title.innerHTML = `${escapeHtml(job.name)} <span class="camp-badge ${job.camp}">${campNames[job.camp]}</span>`;
+        
+        // 👑 リンク消去・小文字マークダウン適用済みのHTMLを出力
+        body.innerHTML = parseDiscordMarkdown(job.desc);
+
+        modal.classList.add('active');
+
+        const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + `?job=${encodeURIComponent(jobName)}`;
+        window.history.pushState({ path: newUrl }, '', newUrl);
+    }
+
+    function closeModal(event, force = false) {
+        const modal = document.getElementById('job-modal');
+        modal.classList.remove('active');
+
+        const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+        window.history.pushState({ path: cleanUrl }, '', cleanUrl);
+    }
+
+    function checkUrlParameter() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const jobParam = urlParams.get('job');
+        if (jobParam) {
+            openModal(jobParam);
+        }
+    }
+
     function switchTab(tabName) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
@@ -489,11 +637,8 @@
 
     function escapeHtml(str) {
         return str
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#039;");
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 </script>
 </body>
